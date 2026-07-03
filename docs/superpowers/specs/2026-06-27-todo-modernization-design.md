@@ -1,11 +1,11 @@
-# Basic To-Do List — Modernization Design
+# Daybook — Modernization Design
 
 **Date:** 2026-06-27
 **Status:** Approved (design); pending implementation plan
 
 ## 1. Purpose & Goals
 
-Modernize the existing Laravel 12 / React 18 "Basic To-Do List" into a clean reference
+Modernize the existing Laravel 12 / React 18 Daybook into a clean reference
 example of a CRUD application that follows popular conventions, while drastically reducing
 its infrastructure footprint.
 

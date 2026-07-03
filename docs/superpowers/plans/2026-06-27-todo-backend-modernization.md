@@ -61,7 +61,7 @@
 - [ ] **Step 1: Rewrite `.env.example`** to the SQLite/no-Redis stack. Replace the entire file with:
 
 ```dotenv
-APP_NAME="Basic To-Do List"
+APP_NAME=Daybook
 APP_ENV=local
 APP_KEY=
 APP_DEBUG=true
