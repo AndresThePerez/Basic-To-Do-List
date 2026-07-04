@@ -23,7 +23,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copy package files and build frontend
-COPY package.json package-lock.json vite.config.js ./
+COPY package.json package-lock.json vite.config.js tailwind.config.js postcss.config.cjs ./
 COPY resources ./resources
 RUN npm ci && npm run build && rm -rf node_modules
 
