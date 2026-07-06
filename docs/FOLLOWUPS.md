@@ -63,7 +63,7 @@ is clear:
 
 ## Dev environment on the home server (added 2026-07-05)
 
-The Sail dev stack was set up and verified on this host (`altof@server`, rootless Docker)
+The Sail dev stack was set up and verified on this host (rootless Docker)
 and then brought down after deploying to prod. To resume frontend/backend work with live
 reload:
 
@@ -89,9 +89,9 @@ reload:
 
 3. **If testing from another machine on the LAN** (e.g. Chrome on the workstation),
    the Vite dev server needs two temporary tweaks that should NOT be committed:
-   - `vite.config.js`: add `server: { host: "0.0.0.0", cors: true, allowedHosts: ["server.local"] }`
+   - `vite.config.js`: add `server: { host: "0.0.0.0", cors: true, allowedHosts: ["<lan-hostname>"] }`
      (Vite blocks non-localhost Host headers, and :8080→:5173 is cross-origin).
-   - `public/hot`: overwrite with `http://server.local:5173` (Vite writes `http://0.0.0.0:5173`,
+   - `public/hot`: overwrite with `http://<lan-hostname>:5173` (Vite writes `http://0.0.0.0:5173`,
      which browsers cannot dial). Re-overwrite after every Vite restart — Vite rewrites the file.
    Revert the `vite.config.js` change before committing/deploying; `public/hot` is git-ignored
    and disappears when Vite stops.
@@ -132,6 +132,6 @@ Related fix already applied: `public/hot` and `public/build` are now in
 the image, making prod serve Vite dev-server asset URLs (blank page,
 `ERR_CONNECTION_REFUSED`). That was the cause of the blank page at :8081.
 
-Note: direct LAN access via `http://server.local:8081` renders asset URLs
+Note: direct LAN access via `http://<lan-hostname>:8081` renders asset URLs
 without the port (nginx reports port 80 to PHP) and will look blank — always
 test prod through `https://daybook.andrestheperez.com`.

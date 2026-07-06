@@ -1,6 +1,6 @@
 # Daybook
 
-A small, opinionated to-do list built around one idea: **a day's tasks are ephemeral**. Ad-hoc tasks you add live for **12 hours** and then quietly expire; the ones that matter are explicitly **kept** and persist. The UI makes time a first-class dimension — every ephemeral task shows a depleting time bar, while kept tasks wear a cool "⚓ Kept" chip (warm = fleeting, cool = anchored).
+A small, opinionated to-do list built around one idea: **a day's tasks are ephemeral**. Ad-hoc tasks you add live for **12 hours** and then quietly expire; the ones that matter are explicitly **kept** and persist. The UI makes time a first-class dimension — every ephemeral task shows a live depleting time bar, while kept tasks wear a small padlock badge (warm = fleeting, cool = anchored).
 
 It's a full-stack reference app: a conventional RESTful Laravel API and a custom-designed React front end, both fully tested, running on a **zero-extra-service** stack (SQLite — no MySQL, no Redis).
 
@@ -23,12 +23,12 @@ There are **no MySQL or Redis services** — the app runs against a single SQLit
 ## Features
 
 - **RESTful CRUD API** for tasks and categories under `/api/v1`, with API Resources, pagination, proper status codes (200/201/204/422/404), and a consistent JSON error envelope.
-- **12-hour TTL** on tasks created through the API (`expires_at`). Seeded data is permanent. A global Eloquent scope hides expired tasks immediately; a `tasks:prune` command (scheduled hourly) force-deletes them.
+- **12-hour TTL with an opt-out**: tasks created through the API get `expires_at = now + 12h` unless created (or later updated) with `kept: true`, which makes them permanent. Switching a kept task back to a countdown starts a fresh 12-hour window. A global Eloquent scope hides expired tasks immediately; a `tasks:prune` command (scheduled hourly) force-deletes them.
 - **Soft deletes** with a History / recycle-bin view (`?trashed=only`).
 - **Categories** as a full CRUD resource, each exposing an active `tasks_count`.
 - **Rate limiting** at the Laravel layer: 60 req/min general, 15 req/min for writes.
 - **Daybook design system** — a hand-built Tailwind component library (no UI framework), with a signature per-task time bar. Accessibility: Lighthouse a11y / best-practices / SEO all 100.
-- **Tests as a gate**: 23 backend feature/unit tests, 26 frontend component/integration tests.
+- **Tests as a gate**: 32 backend feature/unit tests, 31 frontend component/integration tests.
 
 ## Quick start (Laravel Sail)
 
@@ -72,9 +72,9 @@ All routes are under `/api/v1` and return JSON. List endpoints return `{ data, l
 | Method | Path | Description | Success |
 |---|---|---|---|
 | GET | `/api/v1/tasks` | List active tasks. Query: `?category_id=`, `?trashed=only` (history), `?page=` | 200 |
-| POST | `/api/v1/tasks` | Create a task (server sets `expires_at = now + 12h`) | 201 |
+| POST | `/api/v1/tasks` | Create a task (`kept: true` for permanent; otherwise `expires_at = now + 12h`) | 201 |
 | GET | `/api/v1/tasks/{task}` | Show a task (expired/soft-deleted → 404 via the global scope) | 200 |
-| PUT | `/api/v1/tasks/{task}` | Full update | 200 |
+| PUT | `/api/v1/tasks/{task}` | Full update; `kept` toggles permanence (kept → countdown restarts the 12h window) | 200 |
 | DELETE | `/api/v1/tasks/{task}` | Soft delete | 204 |
 
 ### Categories
@@ -91,7 +91,7 @@ Validation failures return `422` with `{ message, errors }`; missing resources r
 
 ### The 12-hour TTL
 
-- A `tasks.expires_at` timestamp (nullable) drives the behaviour. **API-created tasks** get `now()->addHours(12)`; **seeded/factory rows** leave it `null` (permanent — "kept").
+- A `tasks.expires_at` timestamp (nullable) drives the behaviour. **API-created tasks** get `now()->addHours(12)` unless the request carries `kept: true` (then `expires_at` stays `null` — permanent). The demo seeder creates a realistic mix of kept tasks and countdowns at varied remaining times.
 - `App\Models\Scopes\NotExpiredScope` is a global scope on `Task` that excludes rows whose `expires_at` is in the past, so expired tasks disappear from every query (and route-model binding 404s them) **even before pruning runs** — correctness never depends on the scheduler.
 - `php artisan tasks:prune` force-deletes expired rows and is registered `hourly()` in `app/Console/Kernel.php`. Run the scheduler with `./vendor/bin/sail artisan schedule:work` if you want pruning locally; it's housekeeping only.
 
@@ -159,4 +159,4 @@ docs/
 
 ## Production notes
 
-`Dockerfile` and `docker-compose.prod.yml` build a single app container (nginx + php-fpm via supervisor) using `pdo_sqlite`. The SQLite file is persisted in the `sqlite-data` named volume mounted at `/var/www/html/database`. Because that volume shadows the file baked into the image, **run `php artisan migrate --force` (and optionally `--seed`) on the first deploy** to initialize the database in the volume. Rate limiting is also enforced at the nginx layer; the app additionally throttles at the Laravel layer.
+`Dockerfile` and `docker-compose.prod.yml` build a single app container (nginx + php-fpm via supervisor) using `pdo_sqlite`. The SQLite file is persisted in the `sqlite-data` named volume mounted at `/var/www/html/database`. Because that volume shadows the file baked into the image, **run `php artisan migrate --force` (and optionally `--seed`) on the first deploy** to initialize the database in the volume. The same shadowing applies to `database/migrations` and `database/seeders` — after changing them, copy them into the container (`docker compose -f docker-compose.prod.yml cp database/seeders/. app:/var/www/html/database/seeders/`) before reseeding; see `docs/FOLLOWUPS.md` for details and the planned fix. `docker/reset-demo-data.sh` resets the demo database to the seeded state (suitable for a daily cron). Rate limiting is also enforced at the nginx layer; the app additionally throttles at the Laravel layer.
