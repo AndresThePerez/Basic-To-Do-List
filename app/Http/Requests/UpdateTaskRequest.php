@@ -18,9 +18,13 @@ class UpdateTaskRequest extends FormRequest
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'title' => [
                 'required', 'string', 'max:255',
-                Rule::unique('tasks', 'title')->ignore($this->route('task')),
+                Rule::unique('tasks', 'title')
+                    ->ignore($this->route('task'))
+                    ->whereNull('deleted_at')
+                    ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now())),
             ],
             'body' => ['required', 'string', 'max:1000'],
+            'kept' => ['sometimes', 'boolean'],
         ];
     }
 

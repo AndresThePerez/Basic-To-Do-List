@@ -28,6 +28,25 @@ test('submits a new task', async () => {
   await waitFor(() => expect(tasks.create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Write tests' })));
 });
 
+test('defaults to countdown and can switch to kept', async () => {
+  tasks.create.mockResolvedValue({ id: 6 });
+  renderCreate();
+  expect(screen.getByRole('radio', { name: /12-hour countdown/i })).toBeChecked();
+  await userEvent.type(screen.getByLabelText(/title/i), 'Forever task');
+  await userEvent.type(screen.getByLabelText(/details|body/i), 'stays around');
+  await userEvent.click(screen.getByRole('radio', { name: /keep/i }));
+  await userEvent.click(screen.getByRole('button', { name: /save task/i }));
+  await waitFor(() => expect(tasks.create).toHaveBeenCalledWith(expect.objectContaining({ kept: true })));
+});
+
+test('edit form initializes kept from a null expires_at', async () => {
+  tasks.show.mockResolvedValue({ id: 7, title: 'Kept task', body: 'b', category: { id: 1 }, expires_at: null });
+  render(<MemoryRouter initialEntries={['/tasks/7/edit']}>
+    <Routes><Route path="/tasks/:id/edit" element={<TaskForm />} /><Route path="/" element={<div>home</div>} /></Routes>
+  </MemoryRouter>);
+  await waitFor(() => expect(screen.getByRole('radio', { name: /keep/i })).toBeChecked());
+});
+
 test('surfaces 422 field errors', async () => {
   tasks.create.mockRejectedValue({ response: { status: 422, data: { errors: { title: ['The title is required.'] } } } });
   renderCreate();

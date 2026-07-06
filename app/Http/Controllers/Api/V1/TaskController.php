@@ -27,7 +27,10 @@ class TaskController extends Controller
 
     public function store(StoreTaskRequest $request)
     {
-        $task = Task::create(array_merge($request->validated(), ['expires_at' => now()->addHours(12)]));
+        $task = Task::create(array_merge(
+            $request->safe()->except('kept'),
+            ['expires_at' => $request->boolean('kept') ? null : now()->addHours(12)]
+        ));
 
         return TaskResource::make($task)
             ->response()
@@ -41,7 +44,17 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, Task $task)
     {
-        $task->update($request->validated());
+        $attributes = $request->safe()->except('kept');
+
+        if ($request->has('kept')) {
+            // Switching a kept task back to a countdown starts a fresh 12h window;
+            // a task that already has a deadline keeps it.
+            $attributes['expires_at'] = $request->boolean('kept')
+                ? null
+                : ($task->expires_at ?? now()->addHours(12));
+        }
+
+        $task->update($attributes);
 
         return TaskResource::make($task);
     }

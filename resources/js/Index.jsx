@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -27,11 +27,19 @@ function Shell({ children }) {
   return <AppShell rail={rail}>{children}</AppShell>;
 }
 
+function NotFound() {
+  return (
+    <p className="text-ink-soft">
+      Page not found. <Link className="text-ink underline" to="/">Back to today</Link>
+    </p>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AppDataProvider>
-        <ToastContainer position="bottom-right" theme="light" />
+        <ToastContainer position="bottom-right" theme="light" pauseOnFocusLoss={false} autoClose={1500} />
         <Shell>
           <Routes>
             <Route path="/" element={<TaskList />} />
@@ -43,6 +51,7 @@ function App() {
             <Route path="/categories/:id" element={<CategoryDetail />} />
             <Route path="/categories/:id/edit" element={<CategoryForm />} />
             <Route path="/history" element={<HistoryView />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Shell>
       </AppDataProvider>

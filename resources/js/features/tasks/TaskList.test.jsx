@@ -33,6 +33,20 @@ test('shows the empty state when there are no tasks', async () => {
   expect(await screen.findByText(/nothing on today/i)).toBeInTheDocument();
 });
 
+test('legend matches the on-screen indicators', async () => {
+  tasks.list.mockResolvedValue({ data: [sample()], meta: { current_page: 1, last_page: 1, total: 1 } });
+  renderList();
+  expect(await screen.findByText(/time left \(tasks last 12h\)/i)).toBeInTheDocument();
+  expect(screen.getByText(/stays forever/i)).toBeInTheDocument();
+});
+
+test('filtered empty state offers a show-all escape', async () => {
+  tasks.list.mockResolvedValue({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } });
+  render(<MemoryRouter initialEntries={['/?category=3']}><TaskList /></MemoryRouter>);
+  expect(await screen.findByText(/nothing in this category today/i)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /show all/i })).toHaveAttribute('href', '/');
+});
+
 test('paginates with load more button', async () => {
   const taskA = sample({ id: 1, title: 'Task A' });
   const taskB = sample({ id: 2, title: 'Task B' });

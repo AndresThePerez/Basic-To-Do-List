@@ -43,20 +43,25 @@ export default function TaskList() {
       <header className="mb-6 flex items-end justify-between">
         <div>
           <h1 className="font-display text-[38px] font-extrabold leading-none">Today</h1>
-          <p className="mt-2 font-mono text-[13px] text-ink-soft">{count} open</p>
+          <p className="mt-2 font-mono text-[13px] text-ink-soft">{meta ? `${count} open` : '—'}</p>
         </div>
         <Link to="/tasks/create"><Button><span className="text-lg leading-none">+</span> New task</Button></Link>
       </header>
 
       <div className="mb-3 flex gap-4 pl-1 text-[11.5px] text-ink-soft">
-        <span className="inline-flex items-center gap-1.5"><span className="h-1 w-6 rounded ttl-fill inline-block" /> time left in its 12h life</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-kept inline-block" /> kept — never expires</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-1 w-6 rounded ttl-fill inline-block" /> time left (tasks last 12h)</span>
+        <span className="inline-flex items-center gap-1.5"><span className="grayscale opacity-60" aria-hidden="true">🔒</span> kept — stays forever</span>
       </div>
 
       {loading && items.length === 0 ? <Spinner /> : items.length === 0 ? (
         <EmptyState
-          title="Nothing on today's list. Add the first task."
-          action={<Link to="/tasks/create"><Button>New task</Button></Link>}
+          title={categoryId ? 'Nothing in this category today.' : "Nothing on today's list. Add the first task."}
+          action={
+            <div className="flex items-center gap-3">
+              {categoryId && <Link to="/"><Button variant="ghost">Show all</Button></Link>}
+              <Link to="/tasks/create"><Button>New task</Button></Link>
+            </div>
+          }
         />
       ) : (
         <div className="flex flex-col gap-2.5">
@@ -66,8 +71,8 @@ export default function TaskList() {
 
       {meta && meta.current_page < meta.last_page && (
         <div className="mt-4">
-          <Button variant="ghost" onClick={() => load(meta.current_page + 1, true)}>
-            Load more
+          <Button variant="ghost" disabled={loading} onClick={() => load(meta.current_page + 1, true)}>
+            {loading ? 'Loading…' : 'Load more'}
           </Button>
         </div>
       )}

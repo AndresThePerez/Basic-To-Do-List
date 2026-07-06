@@ -71,6 +71,126 @@ class TaskApiTest extends TestCase
         $this->assertNotNull(Task::firstWhere('title', 'Write the plan')->expires_at);
     }
 
+    public function test_store_with_kept_creates_task_without_expiry(): void
+    {
+        $category = Category::factory()->create();
+
+        $this->postJson('/api/v1/tasks', [
+            'category_id' => $category->id,
+            'title' => 'Keep me around',
+            'body' => 'No countdown for this one',
+            'kept' => true,
+        ])->assertCreated()->assertJsonPath('data.expires_at', null);
+
+        $this->assertNull(Task::firstWhere('title', 'Keep me around')->expires_at);
+    }
+
+    public function test_store_default_expiry_is_about_12_hours(): void
+    {
+        $category = Category::factory()->create();
+
+        $this->postJson('/api/v1/tasks', [
+            'category_id' => $category->id,
+            'title' => 'Countdown task',
+            'body' => 'Should expire in 12h',
+        ])->assertCreated();
+
+        $expiresAt = Task::firstWhere('title', 'Countdown task')->expires_at;
+        $this->assertEqualsWithDelta(12 * 3600, now()->diffInSeconds($expiresAt), 5);
+    }
+
+    public function test_update_can_mark_task_as_kept(): void
+    {
+        $task = Task::factory()->create(['expires_at' => now()->addHours(3)]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'category_id' => $task->category_id,
+            'title' => $task->title,
+            'body' => $task->body,
+            'kept' => true,
+        ])->assertOk()->assertJsonPath('data.expires_at', null);
+
+        $this->assertNull($task->fresh()->expires_at);
+    }
+
+    public function test_update_kept_false_preserves_existing_expiry(): void
+    {
+        $expiry = now()->addHours(3)->startOfSecond();
+        $task = Task::factory()->create(['expires_at' => $expiry]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'category_id' => $task->category_id,
+            'title' => $task->title,
+            'body' => $task->body,
+            'kept' => false,
+        ])->assertOk();
+
+        $this->assertTrue($task->fresh()->expires_at->equalTo($expiry));
+    }
+
+    public function test_update_kept_false_on_kept_task_starts_fresh_countdown(): void
+    {
+        $task = Task::factory()->create(['expires_at' => null]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'category_id' => $task->category_id,
+            'title' => $task->title,
+            'body' => $task->body,
+            'kept' => false,
+        ])->assertOk();
+
+        $expiresAt = $task->fresh()->expires_at;
+        $this->assertNotNull($expiresAt);
+        $this->assertEqualsWithDelta(12 * 3600, now()->diffInSeconds($expiresAt), 5);
+    }
+
+    public function test_update_without_kept_leaves_expiry_untouched(): void
+    {
+        $task = Task::factory()->create(['expires_at' => null]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'category_id' => $task->category_id,
+            'title' => 'Renamed',
+            'body' => $task->body,
+        ])->assertOk();
+
+        $this->assertNull($task->fresh()->expires_at);
+    }
+
+    public function test_soft_deleted_title_can_be_reused(): void
+    {
+        $task = Task::factory()->create(['title' => 'Repeat me']);
+        $task->delete();
+
+        $this->postJson('/api/v1/tasks', [
+            'category_id' => $task->category_id,
+            'title' => 'Repeat me',
+            'body' => 'Same title, old one is in History',
+        ])->assertCreated();
+    }
+
+    public function test_expired_title_can_be_reused(): void
+    {
+        $task = Task::factory()->expired()->create(['title' => 'Old news']);
+
+        $this->postJson('/api/v1/tasks', [
+            'category_id' => $task->category_id,
+            'title' => 'Old news',
+            'body' => 'Same title, old one already expired',
+        ])->assertCreated();
+    }
+
+    public function test_live_title_still_blocks_duplicates(): void
+    {
+        $task = Task::factory()->create(['title' => 'Taken', 'expires_at' => now()->addHours(6)]);
+
+        $this->postJson('/api/v1/tasks', [
+            'category_id' => $task->category_id,
+            'title' => 'Taken',
+            'body' => 'Should be rejected',
+        ])->assertStatus(422)->assertJsonValidationErrors('title');
+    }
+
     public function test_store_validation_fails_without_title(): void
     {
         $category = Category::factory()->create();

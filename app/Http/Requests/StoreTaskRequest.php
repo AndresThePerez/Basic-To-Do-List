@@ -16,8 +16,15 @@ class StoreTaskRequest extends FormRequest
     {
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
-            'title' => ['required', 'string', 'max:255', Rule::unique('tasks', 'title')],
+            'title' => [
+                'required', 'string', 'max:255',
+                // Only live tasks block a title: ignore soft-deleted and expired rows.
+                Rule::unique('tasks', 'title')
+                    ->whereNull('deleted_at')
+                    ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now())),
+            ],
             'body' => ['required', 'string', 'max:1000'],
+            'kept' => ['sometimes', 'boolean'],
         ];
     }
 

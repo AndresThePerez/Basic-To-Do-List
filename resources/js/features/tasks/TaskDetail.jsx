@@ -25,7 +25,7 @@ export default function TaskDetail() {
       <div className="mb-4"><CategoryTag name={task.category?.name ?? '—'} /></div>
       <h1 className="font-display text-[32px] font-extrabold">{task.title}</h1>
       <Card className="mt-5 flex flex-col gap-4 p-6">
-        <p className="text-[15px] text-ink">{task.body}</p>
+        <p className="whitespace-pre-wrap text-[15px] text-ink">{task.body}</p>
         <div className="flex items-center justify-between border-t border-hairline pt-4">
           <span className="font-mono text-xs text-ink-soft">added {new Date(task.created_at).toLocaleString()}</span>
           {task.expires_at ? <TimeBar expiresAt={task.expires_at} /> : <KeptChip />}

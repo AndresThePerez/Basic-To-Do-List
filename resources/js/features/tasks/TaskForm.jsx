@@ -14,12 +14,17 @@ export default function TaskForm() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { categories, reloadCategories } = useAppData();
-  const [form, setForm] = useState({ title: '', body: '', category_id: '' });
+  const [form, setForm] = useState({ title: '', body: '', category_id: '', kept: false });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isEdit) {
-      tasks.show(id).then((t) => setForm({ title: t.title, body: t.body, category_id: t.category?.id ?? '' }));
+      tasks.show(id).then((t) => setForm({
+        title: t.title,
+        body: t.body,
+        category_id: t.category?.id ?? '',
+        kept: t.expires_at === null,
+      }));
     }
   }, [id, isEdit]);
 
@@ -49,12 +54,35 @@ export default function TaskForm() {
     <div>
       <h1 className="mb-6 font-display text-[32px] font-extrabold">{isEdit ? 'Edit task' : 'New task'}</h1>
       <Card as="form" onSubmit={onSubmit} className="flex flex-col gap-5 p-6">
-        <Input label="Title" id="title" {...field('title')} />
+        <Input label="Title" id="title" autoFocus={!isEdit} {...field('title')} />
         <Select label="Category" id="category_id" {...field('category_id')}>
           <option value="">Choose a category…</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
         <Textarea label="Details" id="body" {...field('body')} />
+        <fieldset>
+          <legend className="mb-1.5 text-xs uppercase tracking-wider text-ink-faint">Lifetime</legend>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-baseline gap-2 text-sm text-ink">
+              <input
+                type="radio"
+                name="kept"
+                checked={!form.kept}
+                onChange={() => setForm((f) => ({ ...f, kept: false }))}
+              />
+              <span>12-hour countdown <span className="text-ink-faint">— moves to History when time runs out</span></span>
+            </label>
+            <label className="flex items-baseline gap-2 text-sm text-ink">
+              <input
+                type="radio"
+                name="kept"
+                checked={form.kept}
+                onChange={() => setForm((f) => ({ ...f, kept: true }))}
+              />
+              <span><span aria-hidden="true">🔒</span> Keep <span className="text-ink-faint">— stays on your list until you remove it</span></span>
+            </label>
+          </div>
+        </fieldset>
         <div className="flex gap-3">
           <Button type="submit">Save task</Button>
           <Button type="button" variant="ghost" onClick={() => navigate('/')}>Cancel</Button>
