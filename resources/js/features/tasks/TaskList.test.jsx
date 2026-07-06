@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 vi.mock('../../lib/api', () => ({
   tasks: { list: vi.fn(), remove: vi.fn() },
 }));
+vi.mock('../../AppData', () => ({ useAppData: () => ({ categories: [{ id: 1, name: 'Work' }], reloadCategories: vi.fn() }) }));
 vi.mock('react-toastify', () => ({ toast: { success: vi.fn(), error: vi.fn(), promise: vi.fn() } }));
 
 import { tasks } from '../../lib/api';
@@ -71,4 +72,26 @@ test('paginates with load more button', async () => {
 
   // Second call should have been made with page: 2
   expect(tasks.list).toHaveBeenCalledWith({ page: 2 });
+});
+
+test('shows a clear-filter chip when filtered by category', async () => {
+  tasks.list.mockResolvedValue({ data: [], meta: { total: 0, current_page: 1, last_page: 1 } });
+  render(
+    <MemoryRouter initialEntries={['/?category=1']}>
+      <TaskList />
+    </MemoryRouter>
+  );
+  const chip = await screen.findByRole('link', { name: /clear work filter/i });
+  expect(chip).toHaveAttribute('href', '/');
+});
+
+test('locked (kept) rows hide edit and delete and are muted', async () => {
+  tasks.list.mockResolvedValue({
+    data: [{ id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } }],
+    meta: { total: 1, current_page: 1, last_page: 1 },
+  });
+  render(<MemoryRouter><TaskList /></MemoryRouter>);
+  await screen.findByText('Kept one');
+  expect(screen.queryByRole('link', { name: /edit/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
 });

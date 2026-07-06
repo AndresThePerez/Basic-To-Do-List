@@ -18,3 +18,9 @@ test('renders the wordmark, date and category nav with counts', () => {
   expect(screen.getByRole('link', { name: /History/i })).toBeInTheDocument();
   expect(screen.getByText(/open today/i)).toBeInTheDocument();
 });
+
+test('offers All tasks and Manage categories links', () => {
+  renderRail();
+  expect(screen.getByRole('link', { name: /All tasks/i })).toHaveAttribute('href', '/');
+  expect(screen.getByRole('link', { name: /Manage categories/i })).toHaveAttribute('href', '/categories');
+});

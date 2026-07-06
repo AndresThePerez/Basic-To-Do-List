@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { vi } from 'vitest';
 
 vi.mock('../../lib/api', () => ({
@@ -39,12 +39,12 @@ test('defaults to countdown and can switch to kept', async () => {
   await waitFor(() => expect(tasks.create).toHaveBeenCalledWith(expect.objectContaining({ kept: true })));
 });
 
-test('edit form initializes kept from a null expires_at', async () => {
-  tasks.show.mockResolvedValue({ id: 7, title: 'Kept task', body: 'b', category: { id: 1 }, expires_at: null });
+test('edit form initializes kept from a non-null expires_at', async () => {
+  tasks.show.mockResolvedValue({ id: 7, title: 'Countdown task', body: 'b', category: { id: 1 }, expires_at: '2026-07-05T12:00:00Z' });
   render(<MemoryRouter initialEntries={['/tasks/7/edit']}>
     <Routes><Route path="/tasks/:id/edit" element={<TaskForm />} /><Route path="/" element={<div>home</div>} /></Routes>
   </MemoryRouter>);
-  await waitFor(() => expect(screen.getByRole('radio', { name: /keep/i })).toBeChecked());
+  await waitFor(() => expect(screen.getByRole('radio', { name: /12-hour countdown/i })).toBeChecked());
 });
 
 test('surfaces 422 field errors', async () => {
@@ -53,4 +53,70 @@ test('surfaces 422 field errors', async () => {
   await userEvent.type(screen.getByLabelText(/details|body/i), 'x');
   await userEvent.click(screen.getByRole('button', { name: /save task/i }));
   expect(await screen.findByText('The title is required.')).toBeInTheDocument();
+});
+
+test('editing a kept task shows a locked notice instead of the form', async () => {
+  tasks.show.mockResolvedValue({ id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } });
+  render(<MemoryRouter initialEntries={['/tasks/9/edit']}>
+    <Routes><Route path="/tasks/:id/edit" element={<TaskForm />} /></Routes>
+  </MemoryRouter>);
+  expect(await screen.findByText(/locked/i)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /save task/i })).not.toBeInTheDocument();
+});
+
+test('locked notice clears after navigating to a task that is not locked', async () => {
+  tasks.show.mockImplementation((id) => Promise.resolve(
+    id === '9'
+      ? { id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } }
+      : { id: 10, title: 'Countdown task', body: 'b', expires_at: '2026-07-05T12:00:00Z', category: { id: 1 } }
+  ));
+
+  function Harness() {
+    const navigate = useNavigate();
+    return (
+      <div>
+        <button onClick={() => navigate('/tasks/10/edit')}>go to 10</button>
+        <TaskForm />
+      </div>
+    );
+  }
+
+  render(<MemoryRouter initialEntries={['/tasks/9/edit']}>
+    <Routes><Route path="/tasks/:id/edit" element={<Harness />} /></Routes>
+  </MemoryRouter>);
+
+  expect(await screen.findByText(/locked/i)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /go to 10/i }));
+
+  expect(await screen.findByRole('button', { name: /save task/i })).toBeInTheDocument();
+  expect(screen.queryByText(/locked/i)).not.toBeInTheDocument();
+});
+
+test('locked notice clears after navigating from a locked edit to the create form', async () => {
+  tasks.show.mockResolvedValue({ id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } });
+
+  function Harness() {
+    const navigate = useNavigate();
+    return (
+      <div>
+        <button onClick={() => navigate('/tasks/create')}>go to create</button>
+        <TaskForm />
+      </div>
+    );
+  }
+
+  render(<MemoryRouter initialEntries={['/tasks/9/edit']}>
+    <Routes>
+      <Route path="/tasks/:id/edit" element={<Harness />} />
+      <Route path="/tasks/create" element={<Harness />} />
+    </Routes>
+  </MemoryRouter>);
+
+  expect(await screen.findByText(/locked/i)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /go to create/i }));
+
+  expect(await screen.findByRole('button', { name: /save task/i })).toBeInTheDocument();
+  expect(screen.queryByText(/locked/i)).not.toBeInTheDocument();
 });

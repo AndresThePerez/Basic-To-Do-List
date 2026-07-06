@@ -72,4 +72,29 @@ class CategoryApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.tasks_count', 2);
     }
+
+    public function test_destroy_category_with_open_tasks_returns_409(): void
+    {
+        $category = Category::factory()->create();
+        Task::factory()->for($category)->create(['expires_at' => null]);
+
+        $this->deleteJson("/api/v1/categories/{$category->id}")->assertStatus(409);
+
+        $this->assertNotSoftDeleted('categories', ['id' => $category->id]);
+    }
+
+    public function test_destroy_category_with_only_history_tasks_succeeds(): void
+    {
+        $category = Category::factory()->create();
+        $task = Task::factory()->for($category)->create();
+        $task->delete();
+
+        $this->deleteJson("/api/v1/categories/{$category->id}")->assertNoContent();
+        $this->assertSoftDeleted('categories', ['id' => $category->id]);
+
+        // History still shows the category label after the category is gone.
+        $this->getJson('/api/v1/tasks?trashed=only')
+            ->assertOk()
+            ->assertJsonPath('data.0.category.name', $category->name);
+    }
 }

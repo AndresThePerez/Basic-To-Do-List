@@ -44,6 +44,12 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, Task $task)
     {
+        $unlocking = $request->has('kept') && ! $request->boolean('kept');
+
+        if ($task->expires_at === null && ! $unlocking) {
+            abort(Response::HTTP_LOCKED, 'This task is kept and locked. Unlock it first.');
+        }
+
         $attributes = $request->safe()->except('kept');
 
         if ($request->has('kept')) {
@@ -61,6 +67,10 @@ class TaskController extends Controller
 
     public function destroy(Task $task)
     {
+        if ($task->expires_at === null) {
+            abort(Response::HTTP_LOCKED, 'Kept tasks are locked and cannot be deleted. Unlock the task first.');
+        }
+
         $task->delete();
 
         return response()->noContent();

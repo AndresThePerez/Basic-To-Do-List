@@ -146,7 +146,11 @@ class TaskApiTest extends TestCase
 
     public function test_update_without_kept_leaves_expiry_untouched(): void
     {
-        $task = Task::factory()->create(['expires_at' => null]);
+        // A locked (kept) task can no longer be edited without unlocking it (see
+        // test_update_locked_task_returns_423), so this exercises the still-relevant
+        // case: a plain update on a countdown task must not touch its expiry.
+        $expiry = now()->addHours(3)->startOfSecond();
+        $task = Task::factory()->create(['expires_at' => $expiry]);
 
         $this->putJson("/api/v1/tasks/{$task->id}", [
             'category_id' => $task->category_id,
@@ -154,7 +158,7 @@ class TaskApiTest extends TestCase
             'body' => $task->body,
         ])->assertOk();
 
-        $this->assertNull($task->fresh()->expires_at);
+        $this->assertTrue($task->fresh()->expires_at->equalTo($expiry));
     }
 
     public function test_soft_deleted_title_can_be_reused(): void
@@ -203,7 +207,8 @@ class TaskApiTest extends TestCase
 
     public function test_update_changes_task(): void
     {
-        $task = Task::factory()->create();
+        // Countdown (non-kept) task: unaffected by the locked-task guard.
+        $task = Task::factory()->create(['expires_at' => now()->addHours(6)]);
 
         $this->putJson("/api/v1/tasks/{$task->id}", [
             'category_id' => $task->category_id,
@@ -214,7 +219,8 @@ class TaskApiTest extends TestCase
 
     public function test_destroy_soft_deletes_and_returns_204(): void
     {
-        $task = Task::factory()->create();
+        // Countdown (non-kept) task: unaffected by the locked-task guard.
+        $task = Task::factory()->create(['expires_at' => now()->addHours(6)]);
 
         $this->deleteJson("/api/v1/tasks/{$task->id}")->assertNoContent();
         $this->assertSoftDeleted('tasks', ['id' => $task->id]);
@@ -260,5 +266,54 @@ class TaskApiTest extends TestCase
         $this->getJson('/api/v1/tasks/999')
             ->assertNotFound()
             ->assertJsonStructure(['message']);
+    }
+
+    public function test_update_locked_task_returns_423(): void
+    {
+        $task = Task::factory()->create(['expires_at' => null]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'title' => 'New title',
+            'body' => 'New body',
+            'category_id' => $task->category_id,
+        ])->assertStatus(423);
+
+        $this->assertSame($task->title, $task->fresh()->title);
+    }
+
+    public function test_destroy_locked_task_returns_423(): void
+    {
+        $task = Task::factory()->create(['expires_at' => null]);
+
+        $this->deleteJson("/api/v1/tasks/{$task->id}")->assertStatus(423);
+
+        $this->assertNotSoftDeleted('tasks', ['id' => $task->id]);
+    }
+
+    public function test_unlock_starts_fresh_countdown_and_allows_edit(): void
+    {
+        $task = Task::factory()->create(['expires_at' => null]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'title' => 'Unlocked title',
+            'body' => $task->body,
+            'category_id' => $task->category_id,
+            'kept' => false,
+        ])->assertOk()->assertJsonPath('data.title', 'Unlocked title');
+
+        $this->assertNotNull($task->fresh()->expires_at);
+    }
+
+    public function test_countdown_task_still_updates_and_deletes_normally(): void
+    {
+        $task = Task::factory()->create(['expires_at' => now()->addHours(6)]);
+
+        $this->putJson("/api/v1/tasks/{$task->id}", [
+            'title' => 'Edited',
+            'body' => $task->body,
+            'category_id' => $task->category_id,
+        ])->assertOk();
+
+        $this->deleteJson("/api/v1/tasks/{$task->id}")->assertNoContent();
     }
 }
