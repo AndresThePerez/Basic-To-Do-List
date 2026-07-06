@@ -92,3 +92,31 @@ test('locked notice clears after navigating to a task that is not locked', async
   expect(await screen.findByRole('button', { name: /save task/i })).toBeInTheDocument();
   expect(screen.queryByText(/locked/i)).not.toBeInTheDocument();
 });
+
+test('locked notice clears after navigating from a locked edit to the create form', async () => {
+  tasks.show.mockResolvedValue({ id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } });
+
+  function Harness() {
+    const navigate = useNavigate();
+    return (
+      <div>
+        <button onClick={() => navigate('/tasks/create')}>go to create</button>
+        <TaskForm />
+      </div>
+    );
+  }
+
+  render(<MemoryRouter initialEntries={['/tasks/9/edit']}>
+    <Routes>
+      <Route path="/tasks/:id/edit" element={<Harness />} />
+      <Route path="/tasks/create" element={<Harness />} />
+    </Routes>
+  </MemoryRouter>);
+
+  expect(await screen.findByText(/locked/i)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /go to create/i }));
+
+  expect(await screen.findByRole('button', { name: /save task/i })).toBeInTheDocument();
+  expect(screen.queryByText(/locked/i)).not.toBeInTheDocument();
+});

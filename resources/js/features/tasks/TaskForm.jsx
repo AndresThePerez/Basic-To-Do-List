@@ -19,13 +19,13 @@ export default function TaskForm() {
   const [locked, setLocked] = useState(false);
 
   useEffect(() => {
+    setLocked(false);
     if (isEdit) {
       tasks.show(id).then((t) => {
         if (t.expires_at === null) {
           setLocked(true);
           return;
         }
-        setLocked(false);
         setForm({
           title: t.title,
           body: t.body,
