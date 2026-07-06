@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
@@ -17,6 +18,22 @@ export default function TaskDetail() {
     tasks.show(id).then(setTask).catch(() => setMissing(true));
   }, [id]);
 
+  async function handleUnlock() {
+    if (!window.confirm('Unlock this task? It becomes editable and starts a fresh 12-hour countdown.')) return;
+    try {
+      const updated = await tasks.update(task.id, {
+        title: task.title,
+        body: task.body,
+        category_id: task.category?.id,
+        kept: false,
+      });
+      setTask(updated);
+      toast.success('Task unlocked');
+    } catch {
+      toast.error('Could not unlock the task');
+    }
+  }
+
   if (missing) return <p className="text-ink-soft">Task not found. <Link className="text-ink underline" to="/">Back to today</Link></p>;
   if (!task) return <Spinner />;
 
@@ -32,7 +49,11 @@ export default function TaskDetail() {
         </div>
       </Card>
       <div className="mt-5 flex gap-3">
-        <Link to={`/tasks/${task.id}/edit`}><Button>Edit task</Button></Link>
+        {task.expires_at ? (
+          <Link to={`/tasks/${task.id}/edit`}><Button>Edit task</Button></Link>
+        ) : (
+          <Button onClick={handleUnlock}>Unlock task</Button>
+        )}
         <Link to="/"><Button variant="ghost">Back</Button></Link>
       </div>
     </div>

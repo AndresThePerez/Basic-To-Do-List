@@ -84,3 +84,14 @@ test('shows a clear-filter chip when filtered by category', async () => {
   const chip = await screen.findByRole('link', { name: /clear work filter/i });
   expect(chip).toHaveAttribute('href', '/');
 });
+
+test('locked (kept) rows hide edit and delete and are muted', async () => {
+  tasks.list.mockResolvedValue({
+    data: [{ id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } }],
+    meta: { total: 1, current_page: 1, last_page: 1 },
+  });
+  render(<MemoryRouter><TaskList /></MemoryRouter>);
+  await screen.findByText('Kept one');
+  expect(screen.queryByRole('link', { name: /edit/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+});

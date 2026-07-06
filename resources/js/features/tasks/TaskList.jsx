@@ -68,7 +68,13 @@ export default function TaskList() {
 
       <div className="mb-3 flex gap-4 pl-1 text-[11.5px] text-ink-soft">
         <span className="inline-flex items-center gap-1.5"><span className="h-1 w-6 rounded ttl-fill inline-block" /> time left (tasks last 12h)</span>
-        <span className="inline-flex items-center gap-1.5"><span className="grayscale opacity-60" aria-hidden="true">🔒</span> kept — stays forever</span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2F6F7E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="4.5" y="11" width="15" height="9.5" rx="2.2" />
+            <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+          </svg>
+          kept — stays forever
+        </span>
       </div>
 
       {loading && items.length === 0 ? <Spinner /> : items.length === 0 ? (

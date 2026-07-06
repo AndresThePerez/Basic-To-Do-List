@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -16,15 +16,22 @@ export default function TaskForm() {
   const { categories, reloadCategories } = useAppData();
   const [form, setForm] = useState({ title: '', body: '', category_id: '', kept: false });
   const [errors, setErrors] = useState({});
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     if (isEdit) {
-      tasks.show(id).then((t) => setForm({
-        title: t.title,
-        body: t.body,
-        category_id: t.category?.id ?? '',
-        kept: t.expires_at === null,
-      }));
+      tasks.show(id).then((t) => {
+        if (t.expires_at === null) {
+          setLocked(true);
+          return;
+        }
+        setForm({
+          title: t.title,
+          body: t.body,
+          category_id: t.category?.id ?? '',
+          kept: t.expires_at === null,
+        });
+      });
     }
   }, [id, isEdit]);
 
@@ -48,6 +55,15 @@ export default function TaskForm() {
       const v = validationErrors(err);
       if (v) setErrors(v); else toast.error('Could not save the task');
     }
+  }
+
+  if (locked) {
+    return (
+      <p className="text-ink-soft">
+        This task is kept and locked.{' '}
+        <Link className="text-ink underline" to={`/tasks/${id}`}>Unlock it from the task page</Link> to edit.
+      </p>
+    );
   }
 
   return (
@@ -79,7 +95,13 @@ export default function TaskForm() {
                 checked={form.kept}
                 onChange={() => setForm((f) => ({ ...f, kept: true }))}
               />
-              <span><span aria-hidden="true">🔒</span> Keep <span className="text-ink-faint">— stays on your list until you remove it</span></span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2F6F7E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="4.5" y="11" width="15" height="9.5" rx="2.2" />
+                  <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+                </svg>
+                Keep <span className="text-ink-faint">— stays on your list until you remove it</span>
+              </span>
             </label>
           </div>
         </fieldset>
