@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { vi } from 'vitest';
 
 vi.mock('../../lib/api', () => ({
@@ -62,4 +62,33 @@ test('editing a kept task shows a locked notice instead of the form', async () =
   </MemoryRouter>);
   expect(await screen.findByText(/locked/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /save task/i })).not.toBeInTheDocument();
+});
+
+test('locked notice clears after navigating to a task that is not locked', async () => {
+  tasks.show.mockImplementation((id) => Promise.resolve(
+    id === '9'
+      ? { id: 9, title: 'Kept one', body: 'b', expires_at: null, category: { id: 1, name: 'Work' } }
+      : { id: 10, title: 'Countdown task', body: 'b', expires_at: '2026-07-05T12:00:00Z', category: { id: 1 } }
+  ));
+
+  function Harness() {
+    const navigate = useNavigate();
+    return (
+      <div>
+        <button onClick={() => navigate('/tasks/10/edit')}>go to 10</button>
+        <TaskForm />
+      </div>
+    );
+  }
+
+  render(<MemoryRouter initialEntries={['/tasks/9/edit']}>
+    <Routes><Route path="/tasks/:id/edit" element={<Harness />} /></Routes>
+  </MemoryRouter>);
+
+  expect(await screen.findByText(/locked/i)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /go to 10/i }));
+
+  expect(await screen.findByRole('button', { name: /save task/i })).toBeInTheDocument();
+  expect(screen.queryByText(/locked/i)).not.toBeInTheDocument();
 });

@@ -25,6 +25,7 @@ export default function TaskForm() {
           setLocked(true);
           return;
         }
+        setLocked(false);
         setForm({
           title: t.title,
           body: t.body,
