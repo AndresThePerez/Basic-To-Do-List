@@ -39,6 +39,10 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
+        if ($category->tasks()->whereNull('deleted_at')->exists()) {
+            abort(Response::HTTP_CONFLICT, 'This category is still used by open tasks and cannot be deleted.');
+        }
+
         $category->delete();
 
         return response()->noContent();
