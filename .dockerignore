@@ -11,3 +11,5 @@ storage/framework/views/*
 tests
 phpunit.xml
 README.md
+public/hot
+public/build
