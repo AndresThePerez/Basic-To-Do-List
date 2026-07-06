@@ -5,6 +5,7 @@ import Spinner from '../../components/ui/Spinner';
 import EmptyState from '../../components/ui/EmptyState';
 import TaskRow from './TaskRow';
 import { tasks } from '../../lib/api';
+import { useAppData } from '../../AppData';
 
 export default function TaskList() {
   const [params] = useSearchParams();
@@ -12,6 +13,10 @@ export default function TaskList() {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { categories } = useAppData();
+  const activeCategory = categoryId
+    ? categories.find((c) => String(c.id) === String(categoryId))
+    : null;
 
   function load(page = 1, append = false) {
     setLoading(true);
@@ -47,6 +52,19 @@ export default function TaskList() {
         </div>
         <Link to="/tasks/create"><Button><span className="text-lg leading-none">+</span> New task</Button></Link>
       </header>
+
+      {activeCategory && (
+        <div className="mb-4">
+          <Link
+            to="/"
+            aria-label={`Clear ${activeCategory.name} filter`}
+            className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs text-ink-soft transition hover:text-ink"
+          >
+            Showing <b className="font-semibold text-ink">{activeCategory.name}</b>
+            <span aria-hidden="true" className="text-sm leading-none">×</span>
+          </Link>
+        </div>
+      )}
 
       <div className="mb-3 flex gap-4 pl-1 text-[11.5px] text-ink-soft">
         <span className="inline-flex items-center gap-1.5"><span className="h-1 w-6 rounded ttl-fill inline-block" /> time left (tasks last 12h)</span>
