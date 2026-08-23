@@ -13,8 +13,9 @@ the app to work; each is a small improvement or an ops note to keep in mind.
 - **Local rootless-Podman / SELinux override is intentionally uncommitted.** Running
   Sail on this Fedora workstation uses a local, git-ignored `docker-compose.override.yml`
   (`SUPERVISOR_PHP_USER=root`) plus `APP_USER=root` and the `APP_PORT=8081`/`VITE_PORT=5174`
-  overrides in `.env`. These are temporary/local; the canonical values (ports 80/5173,
-  default user) live in `.env.example` and the committed `docker-compose.yml`. Revert by
+  overrides in `.env`. These are temporary/local; the canonical values (`APP_PORT=8080`,
+  `VITE_PORT=5173`, default user) live in `.env.example`, and the committed
+  `docker-compose.yml` falls back to port 80 only when `APP_PORT` is unset. Revert by
   deleting the override file and the extra `.env` lines.
 
 ## Backend (small, non-blocking — from the final review)

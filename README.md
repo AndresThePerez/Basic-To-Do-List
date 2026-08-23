@@ -15,7 +15,7 @@ Underneath it is a full-stack reference app with an unusually small operational 
 | Layer | Choice |
 |---|---|
 | Backend | Laravel 12, PHP 8.4 |
-| Database | **SQLite** (single file; queue on the `database` connection, cache and sessions on the filesystem) |
+| Database | **SQLite** (single file; queue and cache on the `database` connection, sessions on the filesystem) |
 | Frontend | React 18, React Router 7, **Tailwind CSS 3**, Vite 6 |
 | API client | axios wrapper over `/api/v1` |
 | Backend tests | PHPUnit 11 (in-memory SQLite) |
