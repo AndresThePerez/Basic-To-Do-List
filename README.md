@@ -160,7 +160,6 @@ docker-compose.prod.yml                       # single production container + sq
 docs/
   design/                                     # cp3-*/cp4-* walkthrough screenshots, daybook-mockup.html
   FOLLOWUPS.md                                # deferred items and known notes
-  superpowers/specs|plans/                    # design + implementation docs
 ```
 
 ## Frontend views
