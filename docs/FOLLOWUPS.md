@@ -107,7 +107,7 @@ reload:
    seeders changed. Prod SQLite lives in the `sqlite-data` named volume, fully separate
    from the dev bind-mounted `database/database.sqlite`.
 
-Next planned work: `docs/superpowers/plans/2026-07-05-category-management-and-locked-tasks.md`.
+Next planned work: category management and locked tasks (shipped 2026-07-05).
 
 ## Prod volume shadows `database/` code (found during 2026-07-05 deploy)
 
